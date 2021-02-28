@@ -1,5 +1,0 @@
-/home/chahe/git/PHOTOGRAMMETRIC-COMPUTER-VISION/Exercise01/build/CMakeFiles/rebuild_cache.dir
-/home/chahe/git/PHOTOGRAMMETRIC-COMPUTER-VISION/Exercise01/build/CMakeFiles/code.dir
-/home/chahe/git/PHOTOGRAMMETRIC-COMPUTER-VISION/Exercise01/build/CMakeFiles/main.dir
-/home/chahe/git/PHOTOGRAMMETRIC-COMPUTER-VISION/Exercise01/build/CMakeFiles/edit_cache.dir
-/home/chahe/git/PHOTOGRAMMETRIC-COMPUTER-VISION/Exercise01/build/CMakeFiles/unit_test.dir
