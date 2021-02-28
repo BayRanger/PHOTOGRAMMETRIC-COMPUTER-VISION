@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcode.a CMakeFiles/code.dir/Pcv1.cpp.o
+/usr/bin/ranlib libcode.a

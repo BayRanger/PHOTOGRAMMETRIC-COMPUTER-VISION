@@ -1,0 +1,24 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/chahe/git/PHOTOGRAMMETRIC-COMPUTER-VISION/Exercise01/Pcv1.h
+opencv2/opencv.hpp
+-
+vector
+-
+string
+-
+
+/home/chahe/git/PHOTOGRAMMETRIC-COMPUTER-VISION/Exercise01/unit_test.cpp
+Pcv1.h
+/home/chahe/git/PHOTOGRAMMETRIC-COMPUTER-VISION/Exercise01/Pcv1.h
+opencv2/opencv.hpp
+-
+iostream
+-
+
