@@ -1,0 +1,3 @@
+Focal Length: ~2700
+Principal Point X: ~1500
+Principal Point Y: ~1000
