@@ -20,8 +20,8 @@ namespace pcv1 {
  */
 cv::Vec3f eucl2hom_point_2D(const cv::Vec2f& p)
 {
-    // TO DO !!!
-    return cv::Vec3f();
+    cv::Vec3f hom_point{p[0], p[1], 1};
+    return hom_point;
 }
 
 /**
@@ -31,8 +31,16 @@ cv::Vec3f eucl2hom_point_2D(const cv::Vec2f& p)
  */
 cv::Vec2f hom2eucl_point_2D(const cv::Vec3f& p)
 {
-    // TO DO !!!
-    return cv::Vec2f();
+
+        // check that homogeneous component is not 0
+    if (p[2] == 0) {
+        std::cout << "Invalid value in homogenous vector" << std::endl;
+        return 0;
+        }
+
+        // divide first two components by homogeneous component
+    cv::Vec2f eucl_point(p[0] / p[2], p[1] / p[2]);
+    return eucl_point;
 }
     
     
@@ -44,8 +52,13 @@ cv::Vec2f hom2eucl_point_2D(const cv::Vec3f& p)
 */
 cv::Vec3f getConnectingLine_2D(const cv::Vec3f& p1, const cv::Vec3f& p2)
 {
-    // TO DO !!!
-    return cv::Vec3f();
+    // calculate components of the cross product
+    float a = p1[1] * p2[2] - p1[2] * p2[1];
+    float b = p1[2] * p2[0] - p1[0] * p2[2];
+    float c = p1[0] * p2[1] - p1[1] * p2[0];
+
+    cv::Vec3f joining_line(a, b, c);
+    return joining_line;
 }
 
 /**
@@ -57,8 +70,9 @@ cv::Vec3f getConnectingLine_2D(const cv::Vec3f& p1, const cv::Vec3f& p2)
 cv::Matx33f getTranslationMatrix_2D(float dx, float dy)
 {
     // TO DO !!!
-    return cv::Matx33f();
-}
+    // set directions for the translation in x and y direction
+    cv::Matx33f tran_mat(1., 0., dx, 0., 1., dy, 0., 0., 1.);
+    return tran_mat;}
 
 /**
  * @brief Generates a 2D rotation matrix R defined by angle phi
@@ -67,8 +81,14 @@ cv::Matx33f getTranslationMatrix_2D(float dx, float dy)
  */
 cv::Matx33f getRotationMatrix_2D(float phi)
 {
-    // TO DO !!!
-    return cv::Matx33f();
+        // calculate degree in radians
+    float cos_phi = cos(phi * M_PI / 180);
+    float sin_phi = sin(phi * M_PI / 180);
+
+    // set rotation values in transformation matrix
+    cv::Matx33f rotate_mat(cos_phi, -sin_phi, 0., sin_phi, cos_phi, 0., 0., 0.,
+                            1.);
+    return rotate_mat;
 }
 
 /**
@@ -78,8 +98,9 @@ cv::Matx33f getRotationMatrix_2D(float phi)
  */
 cv::Matx33f getScalingMatrix_2D(float lambda)
 {
-    // TO DO !!!
-    return cv::Matx33f();
+        // set scale values in transformation matrix
+        cv::Matx33f scale_mat(lambda, 0, 0, 0, lambda, 0, 0, 0, 1);
+        return scale_mat;
 }
 
 /**
@@ -92,8 +113,16 @@ cv::Matx33f getScalingMatrix_2D(float lambda)
  */
 cv::Matx33f getH_2D(const cv::Matx33f& T, const cv::Matx33f& R, const cv::Matx33f& S)
 {
-    // TO DO !!!
-    return cv::Matx33f();
+    // combine translation rotation and scaling
+    cv::Matx33f t_r_s_mat = S * R * T;
+
+    // set the bottom right element to 1
+    float last_ele = t_r_s_mat(2, 2);
+    t_r_s_mat = t_r_s_mat * (1.0 / last_ele);
+
+
+    return t_r_s_mat;
+    
 }
 
 /**
@@ -121,17 +150,23 @@ std::vector<cv::Vec3f> applyH_2D(const std::vector<cv::Vec3f>& geomObjects, cons
 
     switch (type) {
         case GEOM_TYPE_POINT: {
-            // TO DO !!!
-        } break;
+                // if objects are point multiply with the homography matrix
+                for (int i = 0; i < geomObjects.size(); i++) {
+                    cv::Vec3f geo_obj = H * geomObjects[i];
+                    result.push_back(geo_obj);        } break;
         case GEOM_TYPE_LINE: {
-            // TO DO !!!
-        } break;
+                //if objects are lines multiply with the inverse of the homography matrix
+                cv::Matx33f inv_t_H = H.inv().t();
+                for (int i = 0; i < geomObjects.size(); i++) {
+                    cv::Vec3f geo_obj = inv_t_H * geomObjects[i];
+                    result.push_back(geo_obj);
+                }        } break;
         default:
             throw std::runtime_error("Unhandled geometry type!");
-    }
+        }
     return result;
+    }
 }
-
 /**
  * @brief Checks if a point is on a line
  * @param point The given point in homogeneous coordinates
@@ -141,8 +176,23 @@ std::vector<cv::Vec3f> applyH_2D(const std::vector<cv::Vec3f>& geomObjects, cons
  */
 bool isPointOnLine_2D(const cv::Vec3f& point, const cv::Vec3f& line, float eps)
 {
-    // TO DO !!!
-    return false;
+        // make sure homogeneous component is 1
+        if (point[2] != 1.) {
+            float pointx = point[0] / point[2];
+            float pointy = point[1] / point[2];
+        }
+        float pointx = point[0];
+        float pointy = point[1];
+
+        // calculate distance between point and line
+        float distance = abs(pointx * line[0] + pointy * line[1] + line[2]) /
+                         sqrt(line[0] * line[0] + line[1] * line[1]);
+
+        if (distance < eps || (line[0] == 0 && line[1] == 0)) {
+            return true;
+        } else {
+            return false;
+        }
 }
 
 
@@ -158,10 +208,9 @@ void run(const std::string &fname){
 
     // load image as gray-scale, path in argv[1]
     std::cout << "Load image: start" << std::endl;
-    cv::Mat inputImage;
     
-    // TO DO !!!
-    // inputimage = ???
+    cv::Mat inputImage = cv::imread(fname);
+
     
     if (!inputImage.data){
         std::cout << "ERROR: image could not be loaded from " << fname << std::endl;
@@ -181,9 +230,8 @@ void run(const std::string &fname){
 
     // same points in homogeneous coordinates
     cv::Vec3f v1, v2;
-    // TO DO !!!
-    // define v1 as homogeneous version of x
-    // define v2 as homogeneous version of y
+    v1 = eucl2hom_point_2D(x);
+    v2 = eucl2hom_point_2D(y);
     
     // print points
     std::cout << "point 1: " << v1.t() << "^T" << std::endl;
