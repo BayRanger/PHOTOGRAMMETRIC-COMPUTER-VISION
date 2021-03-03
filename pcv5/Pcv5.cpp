@@ -27,8 +27,31 @@ namespace pcv5 {
  */
 std::vector<cv::Vec3f> applyH_2D(const std::vector<cv::Vec3f>& geomObjects, const cv::Matx33f &H, GeometryType type)
 {
-    // TO DO !!!
-    return {};
+    std::vector<cv::Vec3f> result;
+    switch (type) {
+        case GEOM_TYPE_POINT: {
+            // if objects are point multiply with the homography matrix
+            for (int i = 0; i < geomObjects.size(); i++) {
+                cv::Vec3f geo_obj = H * geomObjects[i];
+                result.push_back(geo_obj);
+            }
+
+        }
+            break;
+        case GEOM_TYPE_LINE: {
+            //if objects are lines multiply with the inverse of the homography matrix
+            cv::Matx33f inv_t_H = H.inv().t();
+            for (int i = 0; i < geomObjects.size(); i++) {
+                cv::Vec3f geo_obj = inv_t_H * geomObjects[i];
+                result.push_back(geo_obj);
+            }
+
+        }
+            break;
+        default:
+            throw std::runtime_error("Unhandled geometry type!");
+    }
+    return result;
 }
 
 /**
@@ -38,9 +61,31 @@ std::vector<cv::Vec3f> applyH_2D(const std::vector<cv::Vec3f>& geomObjects, cons
  */
 cv::Matx33f getCondition2D(const std::vector<cv::Vec3f>& points2D)
 {
-    // TO DO !!!
-    return cv::Matx33f::eye();
-}
+ 
+    float s_x(0), s_y(0), t_x(0), t_y(0);
+    for (int i =0; i < points2D.size(); i++)
+    {
+
+        t_x += points2D[i][0];
+        t_y += points2D[i][1];
+    }
+    float num = points2D.size();
+ 
+    t_x = t_x/num;
+    t_y = t_y/num;
+    for (int i =0; i < points2D.size(); i++)
+    {
+        s_x += std::abs(points2D[i][0]- t_x);
+        s_y += std::abs(points2D[i][1]- t_y);
+     }
+
+     s_x =s_x/num;
+     s_y =s_y/num;
+ 
+    cv::Matx33f  condition_mat {1.f/s_x,0.,-t_x/s_x,
+        0.,1.f/s_y,-t_y/s_y,0.,0.,1.};
+    return condition_mat;
+ }
 
 
 /**
@@ -49,10 +94,25 @@ cv::Matx33f getCondition2D(const std::vector<cv::Vec3f>& points2D)
  * @param points Array of input points, each in homogeneous coordinates
  * @returns Array of transformed objects.
  */
-std::vector<cv::Vec4f> applyH_3D_points(const std::vector<cv::Vec4f>& geomObjects, const cv::Matx44f &H)
+std::vector<cv::Vec4f> applyH_3D_points(const std::vector<cv::Vec4f>& points, const cv::Matx44f &H)
 {
-    // TO DO !!!
-    return {};
+     std::vector<cv::Vec4f> result;
+ 
+    for(int i = 0; i < points.size(); i++){
+
+        cv::Vec4f geopoint = points[i];
+        cv::Vec4f tmp;
+        tmp[0] = geopoint[0] * H(0,0) + geopoint[1] * H(0,1) + geopoint[2]*H(0,2)+ geopoint[3]* H(0,3);
+        tmp[1] = geopoint[0] * H(1,0) + geopoint[1] * H(1,1) + geopoint[2]*H(1,2)+ geopoint[3]* H(1,3);
+        tmp[2] = geopoint[0] * H(2,0) + geopoint[1] * H(2,1) + geopoint[2]*H(2,2)+ geopoint[3]* H(2,3);
+        tmp[3] = geopoint[0] * H(3,0) + geopoint[1] * H(3,1) + geopoint[2]*H(3,2)+ geopoint[3]* H(3,3);
+
+        result.push_back(tmp);
+
+    }
+    
+
+    return result;
 }
 
 /**
@@ -60,10 +120,38 @@ std::vector<cv::Vec4f> applyH_3D_points(const std::vector<cv::Vec4f>& geomObject
  * @param p The points as matrix
  * @returns The condition matrix 
  */
-cv::Matx44f getCondition3D(const std::vector<cv::Vec4f>& points3D)
+cv::Matx44f getCondition3D(const std::vector<cv::Vec4f>& points)
 {
-    // TO DO !!!
-    return cv::Matx44f::eye();
+    float s_x(0), s_y(0), s_z(0), t_x(0), t_y(0), t_z(0);
+    for (int i =0; i < points.size(); i++)
+    {
+
+        t_x += points[i][0];
+        t_y += points[i][1];
+        t_z += points[i][2];
+    }
+    float num = points.size();
+ 
+    t_x = t_x/num;
+    t_y = t_y/num;
+    t_z = t_z/num;
+
+    for (int i =0; i < points.size(); i++)
+    {
+        s_x += std::abs(points[i][0]- t_x);
+        s_y += std::abs(points[i][1]- t_y);
+        s_z += std::abs(points[i][2]- t_z);
+     }
+
+     s_x =s_x/num;
+     s_y =s_y/num;
+     s_z =s_z/num;
+ 
+    cv::Matx44f  condition_mat {1.f/s_x,0.,0,-t_x/s_x,
+        0.,1.f/s_y,0.0,-t_y/s_y,
+        0.,0.,1.f/s_z, -t_z/s_z,
+        0.0, 0.0, 0.0, 1.0};
+    return condition_mat;
 }
 
 
@@ -79,8 +167,38 @@ cv::Matx44f getCondition3D(const std::vector<cv::Vec4f>& points3D)
  */
 cv::Mat_<float> getDesignMatrix_camera(const std::vector<cv::Vec3f>& points2D, const std::vector<cv::Vec4f>& points3D)
 {
-    // TO DO !!!
-    return cv::Mat_<float>(2*points2D.size(), 12);
+    int pair_size = points2D.size();
+
+    cv::Mat_<float> dst = cv::Mat_<float>::zeros(pair_size * 2, 12);
+
+    for (int pair_num =0;  pair_num < pair_size; pair_num ++ )
+    {
+        float u_ = points2D[pair_num][0];//
+        float v_ = points2D[pair_num][1];//
+        float w_ = points2D[pair_num][2];//
+        dst.at<float>(pair_num*2 +0,0) = - w_ * points3D[pair_num][0];
+        dst.at<float>(pair_num*2 +0,1) = - w_ * points3D[pair_num][1];
+        dst.at<float>(pair_num*2 +0,2) = - w_ * points3D[pair_num][2];
+        dst.at<float>(pair_num*2 +0,3) = - w_ * points3D[pair_num][3];
+
+        dst.at<float>(pair_num*2 +0, 8) =  u_ * points3D[pair_num][0];
+        dst.at<float>(pair_num*2 +0, 9) =  u_ * points3D[pair_num][1];
+        dst.at<float>(pair_num*2 +0,10) =  u_ * points3D[pair_num][2];
+        dst.at<float>(pair_num*2 +0,11) =  u_ * points3D[pair_num][3];
+
+        dst.at<float>(pair_num*2 +1,4) = - w_ * points3D[pair_num][0];
+        dst.at<float>(pair_num*2 +1,5) = - w_ * points3D[pair_num][1];
+        dst.at<float>(pair_num*2 +1,6) = - w_ * points3D[pair_num][2];
+        dst.at<float>(pair_num*2 +1,7) = - w_ * points3D[pair_num][3];
+
+        dst.at<float>(pair_num*2 +1,8)  =  v_ * points3D[pair_num][0];
+        dst.at<float>(pair_num*2 +1,9)  =  v_ * points3D[pair_num][1];
+        dst.at<float>(pair_num*2 +1,10) =  v_ * points3D[pair_num][2];
+        dst.at<float>(pair_num*2 +1,11) =  v_ * points3D[pair_num][3];
+
+    }
+
+    return dst;
 }
 
 /**
@@ -90,8 +208,35 @@ cv::Mat_<float> getDesignMatrix_camera(const std::vector<cv::Vec3f>& points2D, c
  */
 cv::Matx34f solve_dlt_camera(const cv::Mat_<float>& A)
 {
-    // TO DO !!!
-    return cv::Matx34f::eye();
+    int A_row = A.rows;
+    int A_col = A.cols;
+    cv::SVD svd(A, cv::SVD::FULL_UV);
+    cv::Matx34f dst = cv::Matx34f::zeros();
+    int idx =0;
+
+    for (int i=0 ; i< 3;i++) // 3 is the row number of dst
+    {
+        for (int j=0 ; j< 4;j++)
+            {
+                idx = i*4+j;
+
+                dst(i,j) = svd.vt.at<float>(A_col-1 ,idx);
+            }
+
+    }
+    float last_ele= dst(2,3);
+    //to normalize it 
+    if ((last_ele)==0 )
+    {
+        return dst;
+    }
+    else
+    {
+        dst = dst * (1.f/last_ele);
+        return dst;
+    }
+
+ 
 }
 
 /**
@@ -102,8 +247,9 @@ cv::Matx34f solve_dlt_camera(const cv::Mat_<float>& A)
  */
 cv::Matx34f decondition_camera(const cv::Matx33f& T_2D, const cv::Matx44f& T_3D, const cv::Matx34f& P)
 {
-    // TO DO !!!
-    return P;
+    cv::Matx34f dst = T_2D.inv() *P * T_3D;
+    return dst;
+
 }
 
 /**
@@ -114,8 +260,19 @@ cv::Matx34f decondition_camera(const cv::Matx33f& T_2D, const cv::Matx44f& T_3D,
  */
 cv::Matx34f calibrate(const std::vector<cv::Vec3f>& points2D, const std::vector<cv::Vec4f>& points3D)
 {
-    // TO DO !!!
-    return cv::Matx34f::eye();
+    cv::Matx33f camera_condition_mat = getCondition2D(points2D);
+    cv::Matx44f obj_condition_mat = getCondition3D(points3D);
+    std::vector<cv::Vec3f> img_conditioned_vec;
+    std::vector<cv::Vec4f> obj_conditioned_vec;
+    img_conditioned_vec = applyH_2D(points2D, camera_condition_mat,GEOM_TYPE_POINT);
+    obj_conditioned_vec = applyH_3D_points(points3D, obj_condition_mat);
+    cv::Mat_<float> design_mat = getDesignMatrix_camera(img_conditioned_vec, obj_conditioned_vec);
+    cv::Matx34f esti_proj_mat =solve_dlt_camera(design_mat );
+    cv::Matx34f projection_mat = decondition_camera(camera_condition_mat, obj_condition_mat, esti_proj_mat);
+ 
+
+
+    return projection_mat;
 }
 
 /**
@@ -127,7 +284,60 @@ cv::Matx34f calibrate(const std::vector<cv::Vec3f>& points2D, const std::vector<
  */
 void interprete(const cv::Matx34f &P, cv::Matx33f &K, cv::Matx33f &R, ProjectionMatrixInterpretation &info)
 {
-    // TO DO !!!
+    cv::Matx33f R_mat, Q_mat,M_mat;
+    for (int i =0; i < 3; i++)
+    {
+        for (int j =0; j < 3; j++)
+        {
+            M_mat(i,j) = P(i,j); 
+        }
+    }
+ 
+
+    cv::RQDecomp3x3(M_mat,R_mat,Q_mat);//,omega_degree, phi_degree, kappa_degree);
+    //TODO: get the info from R & Q
+    // Additional constraints
+    //check if the diagonal element is positive
+    for (int i=0; i<3; i++) {
+        {
+            if ( R(i,i)<0 )
+            {
+                for (int j=0; j<3; j++) {
+                    R_mat(j,i) = R_mat(j,i)* -1;
+                    Q_mat(i,j) = Q_mat(i,j)* -1; 
+                    }
+            }
+       }
+    }
+
+    K = R_mat * (1.0/R_mat(2,2));
+    R = Q_mat;
+    info.omega = atan2(-R(2,1),R(2,2))*180/M_PI;
+    info.phi = atan2(R(2,0),std::sqrt(R(2,1)*R(2,1)+ R(2,2)* R(2,2)))*180/M_PI;
+    info.kappa = atan2(-R(1,0),R(0,0))*180/M_PI;
+
+    // Principal distance or focal length
+
+    info.principalDistance = K(0,0);  // use average?
+
+    // Skew as an angle and in degrees
+    info.skew =  90 - atan2(-K(0,1),K(0,0))*180/CV_PI;
+        
+     // Aspect ratio of the pixels
+    info.aspectRatio = K(1,1) /K(0,0);
+
+
+    info.principalPoint(0) = K(0,2);
+    info.principalPoint(1) = K(1,2);
+    cv::Vec3f T_vec(P(0,3),P(1,3),P(2,3));
+    cv::Vec3f C_vec = - M_mat.inv() * T_vec;   
+
+
+    // 3D camera location in world coordinates
+    info.cameraLocation(0) = C_vec[0];
+    info.cameraLocation(1) = C_vec[1];
+    info.cameraLocation(2) = C_vec[2];
+ 
 }
 
 
@@ -142,8 +352,35 @@ void interprete(const cv::Matx34f &P, cv::Matx33f &K, cv::Matx33f &R, Projection
  */
 cv::Mat_<float> getDesignMatrix_fundamental(const std::vector<cv::Vec3f>& p1_conditioned, const std::vector<cv::Vec3f>& p2_conditioned)
 {
-    // TO DO !!!
-    return cv::Mat_<float>();
+    int pair_size = p1_conditioned.size();
+    if (p2_conditioned.size()!=pair_size || pair_size <8)
+    {
+        std::cout<<"ERROR: The pair size doesn't satisfy the prerequisites"<<std::endl;
+        return cv::Mat_<float>();
+
+     }
+    cv::Mat_<float> design_mat = cv::Mat_<float>::zeros(pair_size, 9);
+    for (int i=0; i < p1_conditioned.size(); i++)
+    {
+        float x1 = p1_conditioned[i][0];
+        float y1 = p1_conditioned[i][1];
+        float x2 = p2_conditioned[i][0];
+        float y2 = p2_conditioned[i][1];        
+        //std::cout<<"HCX "<<x1<<", "<<y1<<" , "<<x2<<" , "<<x2<<" , "<<y2<<std::endl;
+
+        design_mat(i,0) = x1*x2;
+        design_mat(i,1) = y1*x2;
+        design_mat(i,2) = x2;
+        design_mat(i,3) = x1*y2;
+        design_mat(i,4) = y1*y2;
+        design_mat(i,5) = y2;
+        design_mat(i,6) = x1;
+        design_mat(i,7) = y1;
+        design_mat(i,8) = 1.f;
+
+    }
+
+    return design_mat;
 }
 
 
@@ -155,8 +392,20 @@ cv::Mat_<float> getDesignMatrix_fundamental(const std::vector<cv::Vec3f>& p1_con
  */
 cv::Matx33f solve_dlt_fundamental(const cv::Mat_<float>& A)
 {
-    // TO DO !!!
-    return cv::Matx33f::zeros();
+    int A_col = A.cols;
+    cv::SVD svd(A, cv::SVD::FULL_UV);
+    cv::Matx33f F_mat = cv::Matx33f::zeros();
+    int idx =0;
+    float last_ele = svd.vt.at<float>(A_col-1 ,8);
+    for (int i=0 ; i< 3;i++) // 3 is the row number of dst
+    {
+        for (int j=0 ; j< 3;j++)
+            {
+                idx = i*3+j;
+                F_mat(i,j) = svd.vt.at<float>(A_col-1 ,idx)/last_ele;
+            }
+    }
+    return F_mat;
 }
 
 
@@ -167,8 +416,13 @@ cv::Matx33f solve_dlt_fundamental(const cv::Mat_<float>& A)
  */
 cv::Matx33f forceSingularity(const cv::Matx33f& F)
 {
-    // TO DO !!!
-    return F;
+    Mat w,vt ,u;
+    SVD::compute(F,w,u,vt);
+    w.at<float>(2) = 0;
+    //std::cout<<"HCX "<<w<<u<<vt<<std::endl;
+    Mat F_singular = u * Mat::diag(w) * vt;
+
+    return F_singular;
 }
 
 /**
@@ -180,8 +434,8 @@ cv::Matx33f forceSingularity(const cv::Matx33f& F)
  */
 cv::Matx33f decondition_fundamental(const cv::Matx33f& T1, const cv::Matx33f& T2, const cv::Matx33f& F)
 {
-    // TO DO !!!
-    return F;
+     cv::Matx33f deconditionedF= T2.t() * F * T1;
+    return deconditionedF;
 }
 
 
@@ -193,8 +447,23 @@ cv::Matx33f decondition_fundamental(const cv::Matx33f& T1, const cv::Matx33f& T2
  */
 cv::Matx33f getFundamentalMatrix(const std::vector<cv::Vec3f>& p1, const std::vector<cv::Vec3f>& p2)
 {
-    // TO DO !!!
-    return cv::Matx33f::eye();
+    std::vector<cv::Vec3f> conditioned_p1_vec, conditioned_p2_vec;
+        //std::cout<<"H"<<std::endl;
+
+
+    auto condition_p1_mat = getCondition2D(p1);
+    auto condition_p2_mat = getCondition2D(p2);
+    conditioned_p1_vec = applyH_2D(p1, condition_p1_mat,GEOM_TYPE_POINT);
+    conditioned_p2_vec = applyH_2D(p2, condition_p2_mat,GEOM_TYPE_POINT);
+
+    cv::Mat_<float> design_fundamental_mat = getDesignMatrix_fundamental(conditioned_p1_vec, conditioned_p2_vec);
+
+    cv::Matx33f F_hat = solve_dlt_fundamental(design_fundamental_mat);
+    F_hat =forceSingularity(F_hat);
+
+    cv::Matx33f F_mat = decondition_fundamental(condition_p1_mat,condition_p2_mat,F_hat);
+
+    return F_mat;
 }
 
 
@@ -209,8 +478,11 @@ cv::Matx33f getFundamentalMatrix(const std::vector<cv::Vec3f>& p1, const std::ve
  */
 float getError(const cv::Vec3f& p1, const cv::Vec3f& p2, const cv::Matx33f& F)
 {
-    // TO DO !!!
-    return 0.0f;
+    float xfx = p2.dot( F * p1);
+    float denom = (F*p1)[0]*(F*p1)[0]+ (F*p1)[1]*(F*p1)[1]+ (F.t()*p2)[0]*(F.t()*p2)[0]+ (F.t()*p2)[1]*(F.t()*p2)[1];
+    float result =(xfx*xfx)/denom;
+ 
+    return result;
 }
 
 /**
@@ -223,8 +495,14 @@ float getError(const cv::Vec3f& p1, const cv::Vec3f& p2, const cv::Matx33f& F)
  */
 float getError(const std::vector<cv::Vec3f>& p1, const std::vector<cv::Vec3f>& p2, const cv::Matx33f& F)
 {
-    // TO DO !!!
-    return 0.0f;
+    float error_sum = 0;
+    for (int i =0; i<p1.size(); i++)
+    {
+        float error_tmp = getError(p1[i],p2[i],F);
+        error_sum += error_tmp;
+    }
+
+    return error_sum/(p1.size());
 }
 
 /**
@@ -237,8 +515,17 @@ float getError(const std::vector<cv::Vec3f>& p1, const std::vector<cv::Vec3f>& p
  */
 unsigned countInliers(const std::vector<cv::Vec3f>& p1, const std::vector<cv::Vec3f>& p2, const cv::Matx33f& F, float threshold)
 {
-    // TO DO !!!
-    return 0;
+    unsigned counter =0;
+    for (int i =0; i<p1.size(); i++)
+    {
+        float error_tmp = getError(p1[i],p2[i],F);
+        if (error_tmp <= threshold)
+        {
+            counter ++;
+        }
+    }
+    
+    return counter;
 }
 
 
@@ -253,14 +540,57 @@ unsigned countInliers(const std::vector<cv::Vec3f>& p1, const std::vector<cv::Ve
  */
 cv::Matx33f estimateFundamentalRANSAC(const std::vector<cv::Vec3f>& p1, const std::vector<cv::Vec3f>& p2, unsigned numIterations, float threshold)
 {
-    const unsigned subsetSize = 8;
+   const unsigned subsetSize = 8;
+    int max_inlier = 0;
+    int inlier_tmp = 0;
+    cv::Matx33f best_F;
     
     std::mt19937 rng;
     std::uniform_int_distribution<unsigned> uniformDist(0, p1.size()-1);
     // Draw a random point index with unsigned index = uniformDist(rng);
+    for (int i =0; i< numIterations; i++)
+    {
+        std::vector<cv::Vec3f> sample_vec1, sample_vec2;
+
+        for (int j =0; j< subsetSize; j++)
+        {
+            //discuss how to avoid duplicated elements
+            unsigned idx = uniformDist(rng);
+            sample_vec1.push_back(p1[idx]);
+            sample_vec2.push_back(p2[idx]);
+
+        }
+        cv::Matx33f F_tmp = getFundamentalMatrix(sample_vec1, sample_vec2);
+        inlier_tmp = countInliers(sample_vec1, sample_vec2, F_tmp,threshold);
+        
+        if (inlier_tmp > max_inlier)
+        {
+            max_inlier = inlier_tmp;
+            best_F = F_tmp;
+        }
+    }
     
-    // TO DO !!!
-    return cv::Matx33f::eye();
+    return  best_F;
+}
+
+
+int cameraPoseScore(const std::vector<cv::Vec4f>& points, const cv::Matx34f& P2 )
+{
+    cv::Mat H = cv::Mat::eye(4, 4, CV_32F);
+    H(cv::Range(0, 3), cv::Range(0, 4)) = (cv::Mat)P2 ;
+    int score =0;
+    for  (int i =0; i < points.size(); i++)
+    {
+        cv::Mat another_point = H* cv::Mat(points[i]);
+
+        if (points[i][2]/points[i][3]>0 && (another_point.at<float>(0,2)/another_point.at<float>(0,3)>0))
+        {
+            score++;
+        }
+    }
+
+    return score;
+    
 }
 
 
@@ -277,13 +607,141 @@ cv::Matx33f estimateFundamentalRANSAC(const std::vector<cv::Vec3f>& p1, const st
  * @param p2 Points in second image
  * @param K Internal calibration matrix
  * @returns External calibration matrix of second camera
+- Estimates pose of second camera if first is in the origin
+- Computes essential matrix from points and K
+- Computes four possible camera matrices
+- Chooses the one with most points in front of both cameras
+- Points can be assumed to be outlier free (no RANSAC needed)
  */
 cv::Matx44f computeCameraPose(const cv::Matx33f &K, const std::vector<cv::Vec3f>& p1, const std::vector<cv::Vec3f>& p2)
 {
-    // TO DO !!!
 
-    return cv::Matx44f::eye();
-}
+    std::vector<cv::Vec3f> p1_k,p2_k;
+    //derive F
+    for (int i = 0; i<p1.size(); i++)
+    {
+        p1_k.push_back(K.inv()*p1[i]);
+        p2_k.push_back(K.inv()*p2[i]);
+    }
+    cv::Matx33f F_mat = getFundamentalMatrix(p1_k,p2_k);
+    //derive E
+    cv::Matx33f E_mat = K.t() * F_mat * K;
+     //SVD of E
+    Mat w,vt ,u;
+    SVD::compute( E_mat,w,u,vt);
+    if (cv::determinant(u)<0)
+    {
+        u = u*-1;
+    }
+
+    if(cv::determinant(vt) <0)
+    {
+        vt = vt*-1;
+    }
+    cv::Matx33f W_mat(0,-1,0,1,0,0,0,0,1);
+
+    // get t
+    Mat t = Mat::zeros(3, 1, CV_32FC1);		//B in .pdf
+ 
+    float t1 = u.at<float>(0,2);
+    float t2 = u.at<float>(1,2);
+    float t3 = u.at<float>(2,2);
+    t.at<float>(0,0) = t1; 
+    t.at<float>(0,1) = t2;
+    t.at<float>(0,2) = t3; 
+    //cv::Matx33f t_matx(0, -t3, t2, t3, 0, -t1, -t2, t1, 0);
+
+    //get R
+    cv::Mat R_mat =  u * (cv::Mat)W_mat * vt;
+    cv::Mat R_mat_T =   u * (cv::Mat)W_mat.t() * vt;
+
+    cv::Matx34f P1(1,0,0,0, 0,1,0,0, 0,0,1,0);
+//t, R
+    cv::Matx34f P2_1(R_mat.at<float>(0,0),R_mat.at<float>(0,1),R_mat.at<float>(0,2),t1, 
+        R_mat.at<float>(1,0),R_mat.at<float>(1,1),R_mat.at<float>(1,2), t2,
+        R_mat.at<float>(2,0),R_mat.at<float>(2,1), R_mat.at<float>(2,2), t3);
+    std::vector<cv::Vec4f> target_point_1 = linearTriangulation( K*P1, K*P2_1, p1, p2);
+    
+    int best_choice = 1;
+    int best_score = cameraPoseScore(target_point_1,P2_1);
+
+
+//-t, R
+    cv::Matx34f P2_2(R_mat.at<float>(0,0),R_mat.at<float>(0,1),R_mat.at<float>(0,2),-t1, 
+        R_mat.at<float>(1,0),R_mat.at<float>(1,1),R_mat.at<float>(1,2), -t2,
+        R_mat.at<float>(2,0),R_mat.at<float>(2,1), R_mat.at<float>(2,2), -t3);
+    std::vector<cv::Vec4f> target_point_2 = linearTriangulation( K*P1, K*P2_2, p1, p2);
+    if (cameraPoseScore(target_point_2,P2_2) > best_score)
+    {
+        best_choice = 2;
+        best_score = cameraPoseScore(target_point_2,P2_2);
+    }
+
+//t, R_T
+    cv::Matx34f P2_3(R_mat_T.at<float>(0,0),R_mat_T.at<float>(0,1),R_mat_T.at<float>(0,2),t1, 
+        R_mat_T.at<float>(1,0),R_mat_T.at<float>(1,1),R_mat_T.at<float>(1,2), t2,
+        R_mat_T.at<float>(2,0),R_mat_T.at<float>(2,1), R_mat_T.at<float>(2,2), t3);
+    std::vector<cv::Vec4f> target_point_3 = linearTriangulation( K*P1, K*P2_3, p1, p2);
+    if (cameraPoseScore(target_point_3,P2_3) > best_score)
+    {
+        best_choice = 3;
+        best_score = cameraPoseScore(target_point_3, P2_3);
+
+    }
+
+//-t, R
+    cv::Matx34f P2_4(R_mat_T.at<float>(0,0),R_mat_T.at<float>(0,1),R_mat_T.at<float>(0,2),-t1, 
+        R_mat_T.at<float>(1,0),R_mat_T.at<float>(1,1),R_mat_T.at<float>(1,2), -t2,
+        R_mat_T.at<float>(2,0),R_mat_T.at<float>(2,1), R_mat_T.at<float>(2,2), -t3);
+    std::vector<cv::Vec4f> target_point_4 = linearTriangulation( K*P1, K*P2_4, p1, p2);
+    if (cameraPoseScore(target_point_4,P2_4) > best_score)
+    {
+        best_choice = 4;
+        best_score = cameraPoseScore(target_point_4,P2_4);
+    }
+
+
+    if(best_choice ==1)
+        {
+            cv::Matx44f camera_pose(R_mat.at<float>(0,0),R_mat.at<float>(0,1),R_mat.at<float>(0,2),t1, 
+            R_mat.at<float>(1,0),R_mat.at<float>(1,1),R_mat.at<float>(1,2), t2,
+            R_mat.at<float>(2,0),R_mat.at<float>(2,1), R_mat.at<float>(2,2), t3,
+            0.f,0.f,0.f,1.f);
+            return camera_pose;
+
+        }
+ 
+    if(best_choice ==2)
+        {
+            cv::Matx44f camera_pose(R_mat.at<float>(0,0),R_mat.at<float>(0,1),R_mat.at<float>(0,2),-t1, 
+            R_mat.at<float>(1,0),R_mat.at<float>(1,1),R_mat.at<float>(1,2), -t2,
+            R_mat.at<float>(2,0),R_mat.at<float>(2,1), R_mat.at<float>(2,2), -t3,
+            0,0,0,1);
+            return camera_pose;
+
+        }
+ 
+    if(best_choice ==3)
+        {
+            cv::Matx44f camera_pose(R_mat_T.at<float>(0,0),R_mat_T.at<float>(0,1),R_mat_T.at<float>(0,2),t1, 
+            R_mat_T.at<float>(1,0),R_mat_T.at<float>(1,1),R_mat_T.at<float>(1,2), t2,
+            R_mat_T.at<float>(2,0),R_mat_T.at<float>(2,1), R_mat_T.at<float>(2,2), t3, 
+            0.f, 0.f, 0.f, 1.f);
+            return camera_pose;
+
+        }
+    
+    if(best_choice ==4)
+        {
+            cv::Matx44f camera_pose(R_mat_T.at<float>(0,0),R_mat_T.at<float>(0,1),R_mat_T.at<float>(0,2),-t1, 
+            R_mat_T.at<float>(1,0),R_mat_T.at<float>(1,1),R_mat_T.at<float>(1,2), -t2,
+            R_mat_T.at<float>(2,0),R_mat_T.at<float>(2,1), R_mat_T.at<float>(2,2), -t3,
+            0.f,0.f,0.f,1.f);
+            return camera_pose;
+
+        }
+ 
+ }
 
 
 
@@ -405,24 +863,25 @@ void BundleAdjustment::BAState::computeResiduals(float *residuals) const
         // Compute 3x4 camera matrix (composition of internal and external calibration)
         // Internal calibration is calibState.K
         // External calibration is dropLastRow(cameraState.H)
-        
-        cv::Matx34f P ;// = ...
-        
+         
+        cv::Mat P2_tmp = cv::Mat(calibState.K) * ((cv::Mat(cameraState.H))(Range(0, cameraState.H.rows - 1), Range(0, cameraState.H.cols)));
+        //camera matrix
+         cv::Matx34f P2 = (cv::Matx34f)P2_tmp;
         for (const KeyPoint &kp : m_scene.cameras[camIdx].keypoints) {
             const auto &trackState = m_tracks[kp.trackIdx];
-            // TO DO !!!
+            
             // Using P, compute the homogeneous position of the track in the image (world space position is trackState.location)
-            cv::Vec3f projection ;// = ...
+            cv::Vec3f projection = P2*trackState.location;
             
-            // TO DO !!!
             // Compute the euclidean position of the track
+            cv::Vec2f state_eucl(projection[0]/projection[2], projection[1]/ projection[2]);
             
-            // TO DO !!!
             // Compute the residuals: the difference between computed position and real position (kp.location(0) and kp.location(1))
             // Compute and store the (signed!) residual in x direction multiplied by kp.weight
-            // residuals[rIdx++] = ...
+            residuals[rIdx++] = (kp.location(0) - state_eucl[0]) * kp.weight;
+
             // Compute and store the (signed!) residual in y direction multiplied by kp.weight
-            // residuals[rIdx++] = ...
+            residuals[rIdx++] = (kp.location(1) - state_eucl[1]) * kp.weight;
         }
     }
 }
@@ -432,9 +891,10 @@ void BundleAdjustment::BAState::computeJacobiMatrix(JacobiMatrix *dst) const
     BAJacobiMatrix &J = dynamic_cast<BAJacobiMatrix&>(*dst);
     
     unsigned rIdx = 0;
+    //multiple cameras
     for (unsigned camIdx = 0; camIdx < m_cameras.size(); camIdx++) {
-        const auto &calibState = m_internalCalibs[m_scene.cameras[camIdx].internalCalibIdx];
-        const auto &cameraState = m_cameras[camIdx];
+        const auto &calibState = m_internalCalibs[m_scene.cameras[camIdx].internalCalibIdx];//Matx33
+        const auto &cameraState = m_cameras[camIdx];  //Matx44f
         
         for (const KeyPoint &kp : m_scene.cameras[camIdx].keypoints) {
             const auto &trackState = m_tracks[kp.trackIdx];
@@ -445,91 +905,101 @@ void BundleAdjustment::BAState::computeJacobiMatrix(JacobiMatrix *dst) const
 
             // TO DO !!!
             // Compute the positions before and after the internal calibration (compare to slides).
+ 
+            cv::Vec4f v_tmp = cameraState.H *trackState.location; 
+            cv::Vec3f v(v_tmp[0],v_tmp[1],v_tmp[2]);// = ...Before calibration
 
-            cv::Vec3f v ;// = ...
-            cv::Vec3f u ;// = ...
+            cv::Vec3f u = calibState.K * v;// After calibration.
             
             cv::Matx23f J_hom2eucl;
-            // TO DO !!!
             // How do the euclidean image positions change when the homogeneous image positions change?
-            /*
-            J_hom2eucl(0, 0) = ...
-            J_hom2eucl(0, 1) = ...
-            J_hom2eucl(0, 2) = ...
-            J_hom2eucl(1, 0) = ...
-            J_hom2eucl(1, 1) = ...
-            J_hom2eucl(1, 2) = ...
-            */
+            J_hom2eucl(0,0) = 1.0f/u(2);
+            J_hom2eucl(0,1) = 0.0f;
+            J_hom2eucl(0,2) = - u(0)/(u(2)*u(2));
+            J_hom2eucl(1,0) = 0.0f;
+            J_hom2eucl(1,1) = 1.0f/u(2);
+            J_hom2eucl(1,2) =  -u(1)/(u(2)*u(2));
             
             cv::Matx33f du_dDeltaK;
-            /*
-            // TO DO !!!
+            
             // How do homogeneous image positions change when the internal calibration is changed (the 3 update parameters)?
-            du_dDeltaK(0, 0) = ...
-            du_dDeltaK(0, 1) = ...
-            du_dDeltaK(0, 2) = ...
-            du_dDeltaK(1, 0) = ...
-            du_dDeltaK(1, 1) = ...
-            du_dDeltaK(1, 2) = ...
-            du_dDeltaK(2, 0) = ...
-            du_dDeltaK(2, 1) = ...
-            du_dDeltaK(2, 2) = ...
-            */
+            du_dDeltaK(0, 0) = v(0)*calibState.K(0,0);
+            du_dDeltaK(0, 1) = v(2)* calibState.K(0,2);
+            du_dDeltaK(0, 2) = 0.0;
+            du_dDeltaK(1, 0) = v(1)* calibState.K(1,1);
+            du_dDeltaK(1, 1) = 0.0;
+            du_dDeltaK(1, 2) = v(2)* calibState.K(1,2);
+            du_dDeltaK(2, 0) = 0.0;
+            du_dDeltaK(2, 1) = 0.0;
+            du_dDeltaK(2, 2) = 0.0;
             
-            
-            // TO DO !!!
             // Using the above (J_hom2eucl and du_dDeltaK), how do the euclidean image positions change when the internal calibration is changed (the 3 update parameters)?
             // Remember to include the weight of the keypoint (kp.weight)
-            // J.m_rows[rIdx].J_internalCalib = 
+            J.m_rows[rIdx].J_internalCalib = J_hom2eucl * du_dDeltaK * kp.weight ;
             
-            
-            // TO DO !!!
             // How do the euclidean image positions change when the tracks are moving in eye space/camera space (the vector "v" in the slides)?
-            cv::Matx<float, 2, 4> J_v2eucl; // works like cv::Matx24f but the latter was not typedef-ed
-            
+
+            //cv::Mat K_34 = cv::Mat::zeros(3, 4, CV_32F);
+            //K_34(cv::Range(0, 3), cv::Range(0, 3)) = (cv::Mat)calibState.K ;
+            cv::Matx34f K_34;
+            cv::Matx33f K = calibState.K;
+            K_34(0,0)= K(0,0);
+            K_34(0,1)= K(0,1);
+            K_34(0,2)= K(0,2);
+            K_34(0,3)= 0.f;
+
+             K_34(1,0)= K(1,0);
+             K_34(1,1)= K(1,1);
+             K_34(1,2)= K(1,2);
+             K_34(1,3)= 0.f;
+
+             K_34(2,0)= K(2,0);
+             K_34(2,1)= K(2,1);
+             K_34(2,2)= K(2,2);
+             K_34(2,3)= 0.f;
+
+             cv::Matx<float, 2, 4> J_v2eucl =  J_hom2eucl * cv::Matx34f(K_34) ; // works like cv::Matx24f but the latter was not typedef-ed
+            //Check
             
             //cv::Matx36f dv_dDeltaH;
             cv::Matx<float, 3, 6> dv_dDeltaH; // works like cv::Matx36f but the latter was not typedef-ed
             
-            // TO DO !!!
             // How do tracks move in eye space (vector "v" in slides) when the parameters of the camera are changed?
-            /*
-            dv_dDeltaH(0, 0) = ...
-            dv_dDeltaH(0, 1) = ...
-            dv_dDeltaH(0, 2) = ...
-            dv_dDeltaH(0, 3) = ...
-            dv_dDeltaH(0, 4) = ...
-            dv_dDeltaH(0, 5) = ...
-            dv_dDeltaH(1, 0) = ...
-            dv_dDeltaH(1, 1) = ...
-            dv_dDeltaH(1, 2) = ...
-            dv_dDeltaH(1, 3) = ...
-            dv_dDeltaH(1, 4) = ...
-            dv_dDeltaH(1, 5) = ...
-            dv_dDeltaH(2, 0) = ...
-            dv_dDeltaH(2, 1) = ...
-            dv_dDeltaH(2, 2) = ...
-            dv_dDeltaH(2, 3) = ...
-            dv_dDeltaH(2, 4) = ...
-            dv_dDeltaH(2, 5) = ...
-            */
             
-            // TO DO !!!
+            dv_dDeltaH(0, 0) = 0.f;
+            dv_dDeltaH(0, 1) = v(2);
+            dv_dDeltaH(0, 2) = -v(1);
+            dv_dDeltaH(0, 3) = trackState.location(3);
+            dv_dDeltaH(0, 4) = 0.f;
+            dv_dDeltaH(0, 5) = 0.f;
+
+            dv_dDeltaH(1, 0) = -v(2);
+            dv_dDeltaH(1, 1) = 0.f;
+            dv_dDeltaH(1, 2) = v(0);
+            dv_dDeltaH(1, 3) = 0.f;
+            dv_dDeltaH(1, 4) = trackState.location(3);
+            dv_dDeltaH(1, 5) = 0.f;
+
+            dv_dDeltaH(2, 0) = v(1);
+            dv_dDeltaH(2, 1) = -v(0);
+            dv_dDeltaH(2, 2) = 0.f;
+            dv_dDeltaH(2, 3) = 0.f;
+            dv_dDeltaH(2, 4) = 0.f;
+            dv_dDeltaH(2, 5) = trackState.location(3);
+        
+            
             // How do the euclidean image positions change when the external calibration is changed (the 6 update parameters)?
             // Remember to include the weight of the keypoint (kp.weight)
-            // J.m_rows[rIdx].J_camera = 
-            
-            
-            // TO DO !!!
-            // How do the euclidean image positions change when the tracks are moving in world space (the x, y, z, and w before the external calibration)?
+            J.m_rows[rIdx].J_camera =  J_hom2eucl * calibState.K * dv_dDeltaH* kp.weight;//TODO: recheck!
+             
+             // How do the euclidean image positions change when the tracks are moving in world space (the x, y, z, and w before the external calibration)?
             // The multiplication operator "*" works as one would suspect. You can use dropLastRow(...) to drop the last row of a matrix.
-            // cv::Matx<float, 2, 4> J_worldSpace2eucl =
+            //cv::Mat H_34 = cv::Mat(cameraState.H)(cv::Range(0, 3), cv::Range(0, 4));
+            cv::Matx<float, 2, 4> J_worldSpace2eucl = J_v2eucl * cameraState.H ;
             
-            
-            // TO DO !!!
-            // How do the euclidean image positions change when the tracks are changed. 
+             // How do the euclidean image positions change when the tracks are changed. 
             // This is the same as above, except it should also include the weight of the keypoint (kp.weight)
-            // J.m_rows[rIdx].J_track = 
+             J.m_rows[rIdx].J_track = J_worldSpace2eucl * kp.weight;
             
             rIdx++;
         }
@@ -537,7 +1007,7 @@ void BundleAdjustment::BAState::computeJacobiMatrix(JacobiMatrix *dst) const
 }
 
 void BundleAdjustment::BAState::update(const float *update, State *dst) const
-{
+{               
     BAState &state = dynamic_cast<BAState &>(*dst);
     state.m_internalCalibs.resize(m_internalCalibs.size());
     state.m_cameras.resize(m_cameras.size());
@@ -547,8 +1017,7 @@ void BundleAdjustment::BAState::update(const float *update, State *dst) const
     for (unsigned i = 0; i < m_internalCalibs.size(); i++) {
         state.m_internalCalibs[i].K = m_internalCalibs[i].K;
 
-        // TO DO !!!
-        /*
+         /*
         * Modify the new internal calibration
         * 
         * m_internalCalibs[i].K is the old matrix, state.m_internalCalibs[i].K is the new matrix.
@@ -557,6 +1026,13 @@ void BundleAdjustment::BAState::update(const float *update, State *dst) const
         * update[intCalibOffset + i * NumUpdateParams::INTERNAL_CALIB + 1] is how much the principal point is supposed to shift in x direction (scaled by the old x position of the principal point)
         * update[intCalibOffset + i * NumUpdateParams::INTERNAL_CALIB + 2] is how much the principal point is supposed to shift in y direction (scaled by the old y position of the principal point)
         */
+		state.m_internalCalibs[i].K(0, 0) += update[intCalibOffset + i * NumUpdateParams::INTERNAL_CALIB + 0] * m_internalCalibs[i].K(0, 0);
+		state.m_internalCalibs[i].K(0, 2) += update[intCalibOffset + i * NumUpdateParams::INTERNAL_CALIB + 1] * m_internalCalibs[i].K(0, 2);
+		state.m_internalCalibs[i].K(1, 1) += update[intCalibOffset + i * NumUpdateParams::INTERNAL_CALIB + 0] * m_internalCalibs[i].K(1, 1);
+		state.m_internalCalibs[i].K(1, 2) += update[intCalibOffset + i * NumUpdateParams::INTERNAL_CALIB + 2] * m_internalCalibs[i].K(1, 2);
+		state.m_internalCalibs[i].K(2, 2) = 1;
+
+
     }
     unsigned cameraOffset = intCalibOffset + m_internalCalibs.size() * NumUpdateParams::INTERNAL_CALIB;
     for (unsigned i = 0; i < m_cameras.size(); i++) {
@@ -576,8 +1052,14 @@ void BundleAdjustment::BAState::update(const float *update, State *dst) const
         * use rotationMatrixX(...), rotationMatrixY(...), rotationMatrixZ(...), and translationMatrix
         * 
         */
+		state.m_cameras[i].H = rotationMatrixZ(update[cameraOffset + i * NumUpdateParams::CAMERA + 2])
+				*rotationMatrixY(update[cameraOffset + i * NumUpdateParams::CAMERA + 1])
+				*rotationMatrixX(update[cameraOffset + i * NumUpdateParams::CAMERA + 0])
+				*translationMatrix(
+				update[cameraOffset + i * NumUpdateParams::CAMERA + 3],
+				update[cameraOffset + i * NumUpdateParams::CAMERA + 4],
+				update[cameraOffset + i * NumUpdateParams::CAMERA + 5])*m_cameras[i].H;
 
-        //state.m_cameras[i].H = ...
     }
     unsigned trackOffset = cameraOffset + m_cameras.size() * NumUpdateParams::CAMERA;
     for (unsigned i = 0; i < m_tracks.size(); i++) {
@@ -594,12 +1076,10 @@ void BundleAdjustment::BAState::update(const float *update, State *dst) const
         * update[trackOffset + i * NumUpdateParams::TRACK + 2] increment of Z
         * update[trackOffset + i * NumUpdateParams::TRACK + 3] increment of W
         */
-        
-        
-        //state.m_tracks[i].location(0) += ...
-        //state.m_tracks[i].location(1) += ...
-        //state.m_tracks[i].location(2) += ...
-        //state.m_tracks[i].location(3) += ...
+       state.m_tracks[i].location(0) += update[trackOffset + i * NumUpdateParams::TRACK + 0] ;
+       state.m_tracks[i].location(1) += update[trackOffset + i * NumUpdateParams::TRACK + 1] ;
+       state.m_tracks[i].location(2) += update[trackOffset + i * NumUpdateParams::TRACK + 2] ;
+       state.m_tracks[i].location(3) += update[trackOffset + i * NumUpdateParams::TRACK + 3] ;
 
 
         // Renormalization to length one
