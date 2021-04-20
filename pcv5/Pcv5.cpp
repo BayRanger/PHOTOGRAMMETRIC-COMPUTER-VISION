@@ -581,6 +581,7 @@ int cameraPoseScore(const std::vector<cv::Vec4f>& points, const cv::Matx34f& P2 
     int score =0;
     for  (int i =0; i < points.size(); i++)
     {
+        //BUG: here should be a inv: reference: https://blog.csdn.net/u011906844/article/details/54604228
         cv::Mat another_point = H* cv::Mat(points[i]);
 
         if (points[i][2]/points[i][3]>0 && (another_point.at<float>(0,2)/another_point.at<float>(0,3)>0))

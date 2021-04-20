@@ -1,11 +1,10 @@
-Introduction:
+## Introduction:
 
 This repo includes 5 pratical tasks I did for PCV in the 2020 Winter semester.
 
 ### Exercise 2 Projective Transformation:
 
 In this exercise a fundamental projective transformation should be realized. The task consists of rectifying images geometrically and stitching them together.
-
 
 <img src="doc/img/pano.png" alt="panorama" width="100%">
 
@@ -31,7 +30,6 @@ Affine Transformation: 6DOF in 2d, 12 DOF in 3D.
 
 Projective Transformation: 8DOF in 2d, 15 DOF in 3D.
 
-
 <img src="doc/img/cali.png" alt="calibration" width="100%">
 
 ### Exercise 4: Estimation of fundamental Matrix
@@ -50,8 +48,12 @@ Projective Transformation: 8DOF in 2d, 15 DOF in 3D.
 2. Key point description
 3. Key point matching
 4. Filtering ratio test; cross consistency check
-5. Robust restimation
+5. Robust estimation
 
 #### Exervise 5: SFM Pose Estimation
 
 state representation: internal / external calibration, tracks
+
+1. Acquire essential matrix from fundamental matrix
+2. SVD on R to acquire t & R
+3. global error estimation
